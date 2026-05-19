@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThreatFlux SIEM | SOC Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1020;
+    --bg2: #0d1428;
+    --card: #111827;
+    --card2: #131f35;
+    --border: #1f2937;
+    --border2: #243447;
+    --blue: #00c2ff;
+    --blue2: #0080cc;
+    --red: #ff3b3b;
+    --orange: #ff9800;
+    --green: #00ff9c;
+    --purple: #a855f7;
+    --text: #e5e7eb;
+    --muted: #6b7280;
+    --dim: #374151;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,194,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,194,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 220px;
+    min-height: 100vh;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    transition: transform 0.3s;
+  }
+
+  .sidebar-logo {
+    padding: 22px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 16px rgba(0,194,255,0.4);
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--blue);
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+
+  .logo-sub {
+    font-size: 9px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .sidebar-section {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-label {
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 2px;
+    padding: 4px 20px 8px;
+    text-transform: uppercase;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 20px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--muted);
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .nav-item:hover, .nav-item.active {
+    color: var(--text);
+    background: rgba(0,194,255,0.06);
+    border-left-color: var(--blue);
+  }
+
+  .nav-item.active { color: var(--blue); }
+
+  .nav-icon { font-size: 15px; flex-shrink: 0; }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--red);
+    color: white;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  #main {
+    margin-left: 220px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── TOPBAR ── */
+  #topbar {
+    height: 60px;
+    background: rgba(17,24,39,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .topbar-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+
+  .search-box {
+    flex: 1;
+    max-width: 400px;
+    position: relative;
+  }
+
+  .search-box input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 8px 12px 8px 36px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-box input:focus { border-color: var(--blue); }
+  .search-box input::placeholder { color: var(--muted); }
+
+  .search-icon {
+    position: absolute;
+    left: 11px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,255,156,0.1);
+    border: 1px solid rgba(0,255,156,0.3);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--green);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .pulse-dot {
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .icon-btn {
+    width: 36px; height: 36px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .icon-btn:hover { border-color: var(--blue); background: rgba(0,194,255,0.08); }
+
+  .notif-badge {
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 16px; height: 16px;
+    background: var(--red);
+    border-radius: 50%;
+    font-size: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: white;
+    border: 2px solid var(--bg);
+  }
+
+  /* ── PAGE CONTENT ── */
+  #content {
+    padding: 24px;
+    flex: 1;
+  }
+
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .page-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+
+  .page-sub {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+  }
+
+  .page-sub span {
+    color: var(--blue);
+  }
+
+  /* ── STAT CARDS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: default;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border2);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat-card.blue::before { background: var(--blue); box-shadow: 0 0 12px var(--blue); }
+  .stat-card.red::before { background: var(--red); box-shadow: 0 0 12px var(--red); }
+  .stat-card.green::before { background: var(--green); box-shadow: 0 0 12px var(--green); }
+  .stat-card.orange::before { background: var(--orange); box-shadow: 0 0 12px var(--orange); }
+  .stat-card.purple::before { background: var(--purple); box-shadow: 0 0 12px var(--purple); }
+
+  .stat-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-card.blue .stat-value { color: var(--blue); text-shadow: 0 0 20px rgba(0,194,255,0.4); }
+  .stat-card.red .stat-value { color: var(--red); text-shadow: 0 0 20px rgba(255,59,59,0.4); }
+  .stat-card.green .stat-value { color: var(--green); text-shadow: 0 0 20px rgba(0,255,156,0.4); }
+  .stat-card.orange .stat-value { color: var(--orange); text-shadow: 0 0 20px rgba(255,152,0,0.4); }
+  .stat-card.purple .stat-value { color: var(--purple); text-shadow: 0 0 20px rgba(168,85,247,0.4); }
+
+  .stat-delta {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  .stat-delta.up { color: var(--green); }
+  .stat-delta.down { color: var(--red); }
+
+  .stat-icon {
+    position: absolute;
+    right: 16px; top: 16px;
+    font-size: 22px;
+    opacity: 0.15;
+  }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--blue);
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 6px var(--blue);
+  }
+  .panel-dot.red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .panel-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  .panel-action {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--blue);
+    cursor: pointer;
+    padding: 4px 10px;
+    border: 1px solid rgba(0,194,255,0.3);
+    border-radius: 6px;
+    transition: all 0.2s;
+    background: none;
+  }
+
+  .panel-action:hover {
+    background: rgba(0,194,255,0.1);
+  }
+
+  /* ── CONTROL MODULES ── */
+  .control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .ctrl-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 16px;
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    background: var(--card2);
+    cursor: pointer;
+    transition: all 0.25s;
+    font-family: 'Syne', sans-serif;
+    text-align: left;
+  }
+
+  .ctrl-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  }
+
+  .ctrl-btn.intel { border-color: rgba(0,255,156,0.3); }
+  .ctrl-btn.intel:hover { border-color: var(--green); background: rgba(0,255,156,0.06); }
+
+  .ctrl-btn.enforce { border-color: rgba(0,194,255,0.3); }
+  .ctrl-btn.enforce:hover { border-color: var(--blue); background: rgba(0,194,255,0.06); }
+
+  .ctrl-btn.pentest { border-color: rgba(168,85,247,0.3); }
+  .ctrl-btn.pentest:hover { border-color: var(--purple); background: rgba(168,85,247,0.06); }
+
+  .ctrl-btn.blocklist { border-color: rgba(255,152,0,0.3); }
+  .ctrl-btn.blocklist:hover { border-color: var(--orange); background: rgba(255,152,0,0.06); }
+
+  .ctrl-btn.rollback { border-color: rgba(255,59,59,0.3); }
+  .ctrl-btn.rollback:hover { border-color: var(--red); background: rgba(255,59,59,0.06); }
+
+  .ctrl-icon { font-size: 22px; }
+  .ctrl-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .ctrl-desc {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.4;
+  }
+
+  /* ── DIAGNOSTIC ── */
+  .diag-section {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .diag-label {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .diag-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .diag-input {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--green);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .diag-input:focus { border-color: var(--blue); }
+  .diag-input::placeholder { color: var(--dim); }
+
+  .diag-btn {
+    padding: 10px 14px;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    transition: all 0.2s;
+    white-space: nowrap;
+    background: var(--card2);
+    color: var(--text);
+  }
+
+  .diag-btn.check { border-color: rgba(0,194,255,0.4); color: var(--blue); }
+  .diag-btn.check:hover { background: rgba(0,194,255,0.1); border-color: var(--blue); }
+
+  .diag-btn.block { border-color: rgba(255,59,59,0.4); color: var(--red); }
+  .diag-btn.block:hover { background: rgba(255,59,59,0.1); border-color: var(--red); }
+
+  .diag-btn.unblock { border-color: rgba(0,255,156,0.4); color: var(--green); }
+  .diag-btn.unblock:hover { background: rgba(0,255,156,0.1); border-color: var(--green); }
+
+  #test-result-display {
+    margin-top: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    display: none;
+    transition: all 0.4s;
+    border: 1px solid transparent;
+  }
+
+  /* ── THREAT FEED PANEL ── */
+  .feed-list { padding: 8px 0; }
+
+  .feed-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(31,41,55,0.5);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  .feed-item:last-child { border-bottom: none; }
+  .feed-item:hover { background: rgba(0,194,255,0.04); }
+
+  .feed-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .feed-source {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    width: 90px;
+    flex-shrink: 0;
+  }
+
+  .feed-indicator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .feed-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .score-critical { background: rgba(255,59,59,0.15); color: var(--red); border: 1px solid rgba(255,59,59,0.3); }
+  .score-high { background: rgba(255,152,0,0.15); color: var(--orange); border: 1px solid rgba(255,152,0,0.3); }
+  .score-medium { background: rgba(168,85,247,0.15); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
+  .score-low { background: rgba(0,194,255,0.1); color: var(--blue); border: 1px solid rgba(0,194,255,0.2); }
+
+  /* ── TERMINAL ── */
+  .terminal-section { padding: 0 20px 20px; }
+
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #0a0a0a;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid #222;
+    border-bottom: none;
+    margin-top: 16px;
+  }
+
+  .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .term-dot.r { background: #ff5f56; }
+  .term-dot.y { background: #ffbd2e; }
+  .term-dot.g { background: #27c93f; }
+  .term-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 6px;
+    letter-spacing: 1px;
+  }
+
+  #terminal {
+    background: #050a0f;
+    border: 1px solid #1a2533;
+    border-radius: 0 0 8px 8px;
+    padding: 16px;
+    height: 220px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--green);
+    line-height: 1.6;
+  }
+
+  #terminal::-webkit-scrollbar { width: 4px; }
+  #terminal::-webkit-scrollbar-track { background: transparent; }
+  #terminal::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .term-line { margin-bottom: 2px; }
+  .term-line.cmd { color: var(--blue); }
+  .term-line.warn { color: var(--orange); }
+  .term-line.err { color: var(--red); }
+  .term-line.success { color: var(--green); }
+
+  /* ── PROGRESS ── */
+  .progress-section {
+    padding: 0 20px 12px;
+  }
+
+  #progress-wrap {
+    display: none;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+  }
+
+  .prog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  #status-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+  }
+
+  #prog-pct {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  #progress-bar-container {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  #progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--blue), var(--purple));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    box-shadow: 0 0 8px rgba(0,194,255,0.5);
+  }
+
+  /* Stop button */
+  #stop-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(255,59,59,0.1);
+    border: 1px solid rgba(255,59,59,0.4);
+    border-radius: 8px;
+    color: var(--red);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    display: none;
+    transition: all 0.2s;
+  }
+
+  #stop-btn:hover { background: rgba(255,59,59,0.2); }
+
+  /* ── BOTTOM GRID ── */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  /* ── BLOCKLIST TABLE ── */
+  .blocklist-panel {
+    display: none;
+  }
+
+  .bl-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  .bl-table th {
+    padding: 10px 16px;
+    text-align: left;
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+
+  .bl-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(31,41,55,0.5);
+    vertical-align: middle;
+  }
+
+  .bl-table tr:last-child td { border-bottom: none; }
+  .bl-table tr:hover td { background: rgba(0,194,255,0.03); }
+
+  .ip-cell { color: var(--red); font-weight: 500; }
+  .url-cell { color: var(--muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .score-cell { text-align: center; }
+
+  /* ── ANALYTICS BAR CHART ── */
+  .chart-area {
+    padding: 20px;
+  }
+
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 100px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    transition: height 1s cubic-bezier(.4,0,.2,1), filter 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .bar:hover { filter: brightness(1.3); }
+
+  .bar-lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .chart-x {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+  }
+
+  /* ── ATTACK MAP PLACEHOLDER ── */
+  .map-area {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .world-map-svg {
+    width: 100%;
+    height: 130px;
+    border-radius: 8px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .map-overlay {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+  }
+
+  .map-glow {
+    position: absolute;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,194,255,0.15), transparent 70%);
+    animation: glow-move 4s infinite alternate;
+  }
+
+  @keyframes glow-move {
+    0% { top: 20%; left: 30%; }
+    25% { top: 50%; left: 60%; }
+    50% { top: 30%; left: 70%; }
+    75% { top: 60%; left: 20%; }
+    100% { top: 20%; left: 30%; }
+  }
+
+  .attack-list { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+  .attack-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(31,41,55,0.5);
+  }
+
+  .attack-flag { font-size: 14px; }
+  .attack-country { color: var(--muted); flex: 1; font-size: 10px; }
+  .attack-count { color: var(--text); }
+  .attack-bar-bg {
+    flex: 2;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .attack-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--red), var(--orange));
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .stat-card { animation: fadeInUp 0.5s ease both; }
+  .stat-card:nth-child(1) { animation-delay: 0.05s; }
+  .stat-card:nth-child(2) { animation-delay: 0.1s; }
+  .stat-card:nth-child(3) { animation-delay: 0.15s; }
+  .stat-card:nth-child(4) { animation-delay: 0.2s; }
+  .stat-card:nth-child(5) { animation-delay: 0.25s; }
+
+  .panel { animation: fadeInUp 0.5s ease both; animation-delay: 0.3s; }
+
+  /* scrollbar global */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    .main-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 900px) {
+    #sidebar { transform: translateX(-100%); }
+    #main { margin-left: 0; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .bottom-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🔥</div>
+    <div>
+      <div class="logo-text">ThreatFlux</div>
+      <div class="logo-sub">SIEM PLATFORM</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Core</div>
+    <div class="nav-item active"><span class="nav-icon">📊</span> Dashboard</div>
+    <div class="nav-item"><span class="nav-icon">🔍</span> Threat Intel</div>
+    <div class="nav-item"><span class="nav-icon">📡</span> Live Monitor <span class="nav-badge">3</span></div>
+    <div class="nav-item"><span class="nav-icon">🗂️</span> IOC Search</div>
+    <div class="nav-item"><span class="nav-icon">🔔</span> Alerts <span class="nav-badge">7</span></div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Defense</div>
+    <div class="nav-item"><span class="nav-icon">🚨</span> Incident Response</div>
+    <div class="nav-item"><span class="nav-icon">🌐</span> Network Security</div>
+    <div class="nav-item"><span class="nav-icon">🦠</span> Malware Analysis</div>
+    <div class="nav-item"><span class="nav-icon">🎯</span> Threat Hunting</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Analytics</div>
+    <div class="nav-item"><span class="nav-icon">📋</span> Logs</div>
+    <div class="nav-item"><span class="nav-icon">🗺️</span> Geo Map</div>
+    <div class="nav-item"><span class="nav-icon">📈</span> Reports</div>
+    <div class="nav-item"><span class="nav-icon">⚙️</span> Settings</div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div>v2.0 · Batch 16.1 · G4</div>
+    <div style="color: var(--green); margin-top:2px;">● All Systems Nominal</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- TOPBAR -->
+  <header id="topbar">
+    <div class="topbar-title">SOC Operations Center</div>
+    <div class="search-box">
+      <span class="search-icon">🔎</span>
+      <input type="text" placeholder="Search IOCs, IPs, domains...">
+    </div>
+    <div class="topbar-right">
+      <div class="status-pill">
+        <div class="pulse-dot"></div>
+        LIVE
+      </div>
+      <div class="icon-btn" title="Notifications">
+        🔔
+        <div class="notif-badge">7</div>
+      </div>
+      <div class="icon-btn" title="User">👤</div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <div class="page-title">THREAT INTELLIGENCE PLATFORM</div>
+        <div class="page-sub">Last updated: <span id="last-updated">--</span> &nbsp;|&nbsp; Feed sources: <span>AbuseIPDB · AlienVault OTX · PhishTank</span></div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-label">Active Threats</div>
+        <div class="stat-value" id="s-threats">247</div>
+        <div class="stat-delta up">↑ 12 since last scan</div>
+        <div class="stat-icon">⚡</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Blocked IPs</div>
+        <div class="stat-value" id="s-blocked">1,892</div>
+        <div class="stat-delta up">↑ 34 today</div>
+        <div class="stat-icon">🚫</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Critical Alerts</div>
+        <div class="stat-value" id="s-alerts">7</div>
+        <div class="stat-delta down">↓ 2 resolved</div>
+        <div class="stat-icon">🔔</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">IOC Hits</div>
+        <div class="stat-value" id="s-ioc">4,310</div>
+        <div class="stat-delta up">↑ 89 this hour</div>
+        <div class="stat-icon">🎯</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Attack Attempts</div>
+        <div class="stat-value" id="s-attacks">18.4K</div>
+        <div class="stat-delta up">↑ 3.2% vs yesterday</div>
+        <div class="stat-icon">⚔️</div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+
+      <!-- Left: Controls + Terminal -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <!-- Control Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><div class="panel-dot"></div>CONTROL MODULES</div>
+          </div>
+          <div class="control-grid">
+            <button class="ctrl-btn intel" onclick="runTask('intel')">
+              <div class="ctrl-icon">🔄</div>
+              <div class="ctrl-label">Update Intel</div>
+              <div class="ctrl-desc">Scrape AbuseIPDB, OTX & PhishTank</div>
+            </button>
+            <button class="ctrl-btn enforce" onclick="runTask('enforce')">
+              <div class="ctrl-icon">🛡️</div>
+              <div class="ctrl-label">Push Defense</div>
+              <div class="ctrl-desc">Enforce iptables for Score ≥ 90</div>
+            </button>
+            <button class="ctrl-btn pentest" onclick="runTask('auto_test')">
+              <div class="ctrl-icon">⚔️</div>
+              <div class="ctrl-label">Batch Pentest</div>
+              <div class="ctrl-desc">Ares Suite — 20-IP batch validation</div>
+            </button>
+            <button class="ctrl-btn blocklist" onclick="showBlockedList()">
+              <div class="ctrl-icon">📋</div>
+              <div class="ctrl-label">View Blocklist</div>
+              <div class="ctrl-desc">Top 50 active kernel DROP rules</div>
+            </button>
+            <button class="ctrl-btn rollback" onclick="runTask('rollback')" style="grid-column: span 2;">
+              <div class="ctrl-icon">↩️</div>
+              <div class="ctrl-label">Emergency Rollback</div>
+              <div class="ctrl-desc">Flush all platform firewall rules and restore previous policy</div>
+            </button>
+          </div>
+
+          <!-- Diagnostic -->
+          <div class="diag-section">
+            <div class="diag-label">Network Diagnostic & Manual Control</div>
+            <div class="diag-row">
+              <input class="diag-input" type="text" id="test-url" placeholder="Enter IP or domain (e.g. 192.168.1.1)">
+              <button class="diag-btn check" onclick="runCustomTest()">Check</button>
+              <button class="diag-btn block" onclick="manualBlock()">Block</button>
+              <button class="diag-btn unblock" onclick="unblockTarget()">Unblock</button>
+            </div>
+            <div id="test-result-display"></div>
+          </div>
+        </div>
+
+        <!-- Execution Log -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><div class="panel-dot green"></div>EXECUTION LOGS</div>
+            <button class="panel-action" onclick="clearTerminal()">Clear</button>
+          </div>
+          <div class="progress-section">
+            <div id="progress-wrap">
+              <div class="prog-header">
+                <span id="status-text">System standby...</span>
+                <span id="prog-pct">0%</span>
+              </div>
+              <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+              </div>
+            </div>
+            <button id="stop-btn" onclick="terminateTask()">⏹ Stop Active Task</button>
+          </div>
+          <div class="terminal-section">
+            <div class="terminal-bar">
+              <div class="term-dot r"></div>
+              <div class="term-dot y"></div>
+              <div class="term-dot g"></div>
+              <div class="term-label">threatflux@soc ~ bash</div>
+            </div>
+            <div id="terminal">
+              <div class="term-line cmd">$ ThreatFlux SIEM v2.0 — System Ready</div>
+              <div class="term-line">Awaiting operator instructions...</div>
+              <div class="term-line" style="color:var(--muted);">─────────────────────────────────────</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Threat Feed -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="panel" style="flex:1;">
+          <div class="panel-header">
+            <div class="panel-title"><div class="panel-dot red"></div>LIVE THREAT FEED</div>
+            <button class="panel-action" onclick="runTask('intel')">Refresh</button>
+          </div>
+          <div class="feed-list" id="feed-list">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- Attack Origins -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><div class="panel-dot"></div>ATTACK ORIGINS</div>
+          </div>
+          <div class="map-area">
+            <div class="world-map-svg">
+              <div class="map-glow"></div>
+              <div class="map-overlay">[ GEO THREAT MAP ]</div>
+            </div>
+            <div class="attack-list" id="attack-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Grid -->
+    <div class="bottom-grid">
+      <!-- Blocklist panel -->
+      <div class="panel blocklist-panel" id="blocklist-container">
+        <div class="panel-header">
+          <div class="panel-title"><div class="panel-dot red"></div>ACTIVE THREAT BLOCKLIST (TOP 50)</div>
+          <button class="panel-action" onclick="document.getElementById('blocklist-container').style.display='none'">Close ×</button>
+        </div>
+        <div style="max-height:280px; overflow-y:auto;">
+          <table class="bl-table">
+            <thead><tr>
+              <th>Blocked IP</th><th>Source / URL</th><th>Risk Score</th>
+            </tr></thead>
+            <tbody id="blocklist-content"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Analytics -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><div class="panel-dot"></div>ATTACKS PER HOUR</div>
+        </div>
+        <div class="chart-area">
+          <div class="bar-chart" id="bar-chart"></div>
+          <div class="chart-x" id="chart-x"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+  // ── State
+  let taskInterval;
+  const term = () => document.getElementById('terminal');
+
+  // ── Timestamp
+  function updateTime() {
+    const el = document.getElementById('last-updated');
+    if (el) el.textContent = new Date().toLocaleTimeString();
+  }
+  updateTime();
+  setInterval(updateTime, 5000);
+
+  // ── Mock Threat Feed
+  const feedData = [
+    { source: 'AbuseIPDB', indicator: '185.220.101.47', score: 98, cls: 'score-critical' },
+    { source: 'AlienVault', indicator: '89.248.165.232', score: 95, cls: 'score-critical' },
+    { source: 'PhishTank',  indicator: 'phish-login-update.xyz', score: 91, cls: 'score-critical' },
+    { source: 'AbuseIPDB', indicator: '141.98.10.182', score: 87, cls: 'score-high' },
+    { source: 'AlienVault', indicator: '45.153.203.161', score: 82, cls: 'score-high' },
+    { source: 'PhishTank',  indicator: 'secure-bank-verify.ru', score: 79, cls: 'score-high' },
+    { source: 'AbuseIPDB', indicator: '193.32.162.39', score: 64, cls: 'score-medium' },
+    { source: 'AlienVault', indicator: '5.188.206.197', score: 41, cls: 'score-low' },
+  ];
+
+  const dotColors = { 'AbuseIPDB': '#ff3b3b', 'AlienVault': '#00c2ff', 'PhishTank': '#ff9800' };
+
+  function renderFeed() {
+    const list = document.getElementById('feed-list');
+    list.innerHTML = feedData.map(f => `
+      <div class="feed-item">
+        <div class="feed-dot" style="background:${dotColors[f.source] || '#6b7280'}"></div>
+        <div class="feed-source">${f.source}</div>
+        <div class="feed-indicator">${f.indicator}</div>
+        <div class="feed-score ${f.cls}">${f.score}</div>
+      </div>
+    `).join('');
+  }
+
+  renderFeed();
+
+  // ── Attack Origins
+  const attacks = [
+    { flag: '🇨🇳', country: 'China', count: 423, pct: 100 },
+    { flag: '🇷🇺', country: 'Russia', count: 311, pct: 73 },
+    { flag: '🇺🇸', country: 'USA', count: 198, pct: 47 },
+    { flag: '🇩🇪', country: 'Germany', count: 142, pct: 34 },
+    { flag: '🇧🇷', country: 'Brazil', count: 97, pct: 23 },
+  ];
+
+  document.getElementById('attack-list').innerHTML = attacks.map(a => `
+    <div class="attack-row">
+      <span class="attack-flag">${a.flag}</span>
+      <span class="attack-country">${a.country}</span>
+      <div class="attack-bar-bg"><div class="attack-bar-fill" style="width:${a.pct}%"></div></div>
+      <span class="attack-count">${a.count}</span>
+    </div>
+  `).join('');
+
+  // ── Bar Chart
+  const hours = ['00','02','04','06','08','10','12','14','16','18','20','22'];
+  const vals  = [34,28,19,12,8,22,48,67,91,82,74,63];
+  const maxV  = Math.max(...vals);
+
+  const barChart = document.getElementById('bar-chart');
+  const chartX   = document.getElementById('chart-x');
+
+  barChart.innerHTML = vals.map((v,i) => {
+    const h = Math.round((v/maxV)*88);
+    const hue = v > 70 ? '#ff3b3b' : v > 40 ? '#ff9800' : '#00c2ff';
+    return `<div class="bar-col">
+      <div class="bar" style="height:${h}px; background:${hue}; opacity:0.8;" title="${v} attacks at ${hours[i]}:00"></div>
+    </div>`;
+  }).join('');
+
+  chartX.innerHTML = hours.map(h => `<span>${h}:00</span>`).join('');
+
+  // ── Task Runner
+  function logLine(msg, cls='') {
+    const t = term();
+    const div = document.createElement('div');
+    div.className = 'term-line' + (cls ? ' ' + cls : '');
+    div.textContent = msg;
+    t.appendChild(div);
+    t.scrollTop = t.scrollHeight;
+  }
+
+  function runTask(task) {
+    const bar = document.getElementById('progress-bar');
+    const wrap = document.getElementById('progress-wrap');
+    const pct  = document.getElementById('prog-pct');
+    const stat = document.getElementById('status-text');
+    const stop = document.getElementById('stop-btn');
+
+    logLine(`> Initiating ${task}...`, 'cmd');
+    wrap.style.display = 'block';
+    stop.style.display = 'block';
+    bar.style.width = '0%';
+    pct.textContent = '0%';
+    stat.textContent = `Running ${task}...`;
+
+    let w = 0;
+    clearInterval(taskInterval);
+    taskInterval = setInterval(() => {
+      if (w < 93) {
+        w += task === 'intel' ? 0.5 : task === 'auto_test' ? 4 : 5;
+        if (w > 93) w = 93;
+        bar.style.width = w + '%';
+        pct.textContent = Math.round(w) + '%';
+      }
+    }, 1000);
+
+    fetch(`/execute/${task}`)
+      .then(r => r.json())
+      .then(d => completeUI(d.output))
+      .catch(e => handleError(e));
+  }
+
+  function completeUI(output) {
+    clearInterval(taskInterval);
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('prog-pct').textContent = '100%';
+    document.getElementById('status-text').textContent = 'Task Complete!';
+    if (output) logLine(output, 'success');
+    setTimeout(() => {
+      document.getElementById('progress-wrap').style.display = 'none';
+      document.getElementById('stop-btn').style.display = 'none';
+    }, 3000);
+  }
+
+  function handleError(err) {
+    clearInterval(taskInterval);
+    logLine(`[!] Error: ${err}`, 'err');
+    document.getElementById('progress-wrap').style.display = 'none';
+    document.getElementById('stop-btn').style.display = 'none';
+  }
+
+  function terminateTask() {
+    fetch('/terminate_task', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        logLine('[!] ' + (d.message || 'Task terminated.'), 'warn');
+        document.getElementById('progress-wrap').style.display = 'none';
+        document.getElementById('stop-btn').style.display = 'none';
+        clearInterval(taskInterval);
+      });
+  }
+
+  function clearTerminal() {
+    term().innerHTML = '<div class="term-line cmd">$ Terminal cleared.</div>';
+  }
+
+  // ── Diagnostic
+  function setResult(msg, color, border) {
+    const d = document.getElementById('test-result-display');
+    d.style.display = 'block';
+    d.style.background = color;
+    d.style.border = `1px solid ${border}`;
+    d.style.color = '#fff';
+    d.textContent = msg;
+  }
+
+  function runCustomTest() {
+    const url = document.getElementById('test-url').value;
+    if (!url) return alert('Please enter a URL or IP.');
+    setResult(`🔍 Testing connectivity to ${url}...`, 'rgba(0,194,255,0.08)', 'rgba(0,194,255,0.3)');
+    logLine(`> Diagnosing: ${url}`, 'cmd');
+    fetch(`/execute/test?target=${url}`)
+      .then(r => r.json())
+      .then(d => {
+        logLine(d.output);
+        if (d.status === 'blocked') setResult('🚫 ACCESS BLOCKED — Firewall Active', 'rgba(255,59,59,0.15)', 'rgba(255,59,59,0.5)');
+        else setResult('✅ ACCESS OPEN — Site Reachable', 'rgba(0,255,156,0.1)', 'rgba(0,255,156,0.4)');
+      })
+      .catch(e => handleError(e));
+  }
+
+  function manualBlock() {
+    const url = document.getElementById('test-url').value;
+    if (!url) return alert('Enter an IP to block.');
+    setResult(`🛡️ Blocking ${url}...`, 'rgba(255,59,59,0.08)', 'rgba(255,59,59,0.3)');
+    logLine(`> Manual block: ${url}`, 'cmd');
+    fetch(`/execute/manual_block?target=${url}`)
+      .then(r => r.json())
+      .then(d => {
+        logLine(d.output);
+        if (d.status === 'blocked') setResult(`🛡️ ${url} — NOW BLOCKED`, 'rgba(255,59,59,0.15)', 'rgba(255,59,59,0.5)');
+        else setResult('❌ Manual Block Failed', 'rgba(255,152,0,0.15)', 'rgba(255,152,0,0.5)');
+      })
+      .catch(e => handleError(e));
+  }
+
+  function unblockTarget() {
+    const url = document.getElementById('test-url').value;
+    if (!url) return alert('Enter an IP to unblock.');
+    setResult(`♻️ Unblocking ${url}...`, 'rgba(0,255,156,0.05)', 'rgba(0,255,156,0.2)');
+    logLine(`> Unblock: ${url}`, 'cmd');
+    fetch(`/execute/unblock?target=${url}`)
+      .then(r => r.json())
+      .then(d => {
+        logLine(d.output);
+        if (d.status === 'open') setResult(`✅ ${url} — NOW ALLOWED`, 'rgba(0,255,156,0.1)', 'rgba(0,255,156,0.4)');
+        else setResult('❌ Unblock Failed', 'rgba(255,59,59,0.15)', 'rgba(255,59,59,0.5)');
+      })
+      .catch(e => handleError(e));
+  }
+
+  // ── Blocklist
+  function showBlockedList() {
+    const container = document.getElementById('blocklist-container');
+    const tbody = document.getElementById('blocklist-content');
+    container.style.display = 'block';
+    tbody.innerHTML = `<tr><td colspan="3" style="color:var(--muted); text-align:center; padding:20px; font-family:'JetBrains Mono',monospace; font-size:11px;">⌛ Correlating kernel rules with threat intel...</td></tr>`;
+
+    fetch('/execute/view_blocked')
+      .then(r => r.json())
+      .then(d => {
+        if (d.items && d.items.length > 0) {
+          tbody.innerHTML = d.items.map(item => {
+            const s = item.score;
+            const cls = s >= 90 ? 'score-critical' : s >= 70 ? 'score-high' : 'score-medium';
+            return `<tr>
+              <td class="ip-cell">${item.indicator}</td>
+              <td class="url-cell">${item.url}</td>
+              <td class="score-cell"><span class="feed-score ${cls}">${item.score}</span></td>
+            </tr>`;
+          }).join('');
+        } else {
+          tbody.innerHTML = `<tr><td colspan="3" style="color:var(--muted); text-align:center; padding:20px; font-family:'JetBrains Mono',monospace; font-size:11px;">No active high-risk rules found in kernel.</td></tr>`;
+        }
+      });
+  }
+
+  // ── Nav items
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.addEventListener('click', function() {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+
+  // Animate bars on load
+  window.addEventListener('load', () => {
+    document.querySelectorAll('.bar').forEach((b, i) => {
+      const h = b.style.height;
+      b.style.height = '0';
+      setTimeout(() => { b.style.height = h; }, 200 + i * 50);
+    });
+  });
+</script>
+</body>
+</html>
