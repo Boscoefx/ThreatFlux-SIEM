@@ -202,9 +202,10 @@ Unauthorized usage against systems without permission is prohibited.
 
 ---
 
-# Author
+# Authors
 
 Boscoefx
+DEVOE51
 
 GitHub:
 https://github.com/Boscoefx
