@@ -1,4 +1,4 @@
-qq# OSINT Data Aggregation
+qq# OSINT Data Aggregations
 requests==2.31.0
 beautifulsoup4==4.12.2
 
