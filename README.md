@@ -196,6 +196,7 @@ Unauthorized usage against systems without permission is prohibited.
 * Docker Deployment
 * Threat Hunting Automation
 * Multi-Tenant SOC Support
+* Updated virsions
 
 
 ---
