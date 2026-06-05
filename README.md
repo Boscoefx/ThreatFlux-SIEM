@@ -30,6 +30,7 @@ The platform integrates multiple intelligence feeds, automated kernel-level defe
 * Automatic high-risk IP blocking
 * Manual block/unblock controls
 * Emergency rollback support
+  
 
 ## Offensive Security Validation
 
