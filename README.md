@@ -31,7 +31,7 @@ The platform integrates multiple intelligence feeds, automated kernel-level defe
 * Manual block/unblock controls
 * Emergency rollback support
 
-## Offensive Security Validation
+## Offensive Security Validations
 
 * Integrated penetration testing module
 * Automated firewall validation
