@@ -160,6 +160,7 @@ Displays active kernel firewall rules and correlated threat data.
 
 ## Emergency Rollback
 
+
 Restores previous firewall state and removes platform rules.
 
 ---
