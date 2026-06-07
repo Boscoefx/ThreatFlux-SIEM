@@ -222,7 +222,7 @@ MIT License
 
 * AbuseIPDB
 * AlienVault OTX
-* PhishTank.
+* PhishTank
 * Open Source Cybersecurity Community
 
 
